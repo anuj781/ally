@@ -1,38 +1,43 @@
-import dotenv from 'dotenv'
-dotenv.config()
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+import connectToDb from "./config/db.js";
+import enquiryRoutes from "./routes/enquiryRoutes.js";
 
-import express from 'express'
-import cors from 'cors'
-import mongoose from 'mongoose'
-import path from 'path'
-import { fileURLToPath } from 'url'
+// Load env vars
+dotenv.config();
 
-// Setup __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// Connect to MongoDB
+connectToDb();
 
-const app = express()
-const port = process.env.PORT || 9988
+// Setup __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Connect to DB
-import connectToDb from './config/db.js'
-connectToDb()
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-// Middlewares
-app.use(cors())
-app.use(express.json())
+// API routes
+app.use("/enquiry", enquiryRoutes);
 
-// Routes
-import enquiryRoutes from './routes/enquiryRoutes.js'
-app.use('/enquiry', enquiryRoutes)
+// Serve frontend in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "client", "dist")));
 
-// Serve React build from /client (Vite output)
-app.use(express.static(path.join(__dirname, 'client')))
-app.get('*', (_, res) => {
-  res.sendFile(path.join(__dirname, 'client', 'index.html'))
-})
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "client", "dist", "index.html"));
+  });
+} else {
+  app.get("/", (req, res) => {
+    res.send("API is running...");
+  });
+}
 
 // Start server
-app.listen(port, () => {
-  console.log(`✅ Server running at http://localhost:${port}`)
-})
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
